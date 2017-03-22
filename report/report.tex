@@ -1,0 +1,312 @@
+\documentclass[11pt,a4j]{jsarticle}
+\usepackage{float,array,booktabs,here}
+\usepackage{amsmath}
+\usepackage{bm}
+\usepackage[dvipdfmx]{graphicx}
+%\usepackage[whole]{bxcjkjatype}%日本語もコンパイル可にする.
+%\usepackage[dvipdfmx,hiresbb]{graphicx}
+\usepackage[top=25truemm,bottom=25truemm,left=25truemm,right=25truemm]{geometry}
+
+\title{画像処理プログラミング}
+\author{61401007 情報工学科　3年　飯塚 健介}
+\date{\today}
+\begin{document}
+    \maketitle
+    \section{section name}
+    \subsection{subsection name}
+
+
+    \begin{figure}[H]
+      \centering
+      \includegraphics[clip,width=7.0cm ,height= 6.0cm]{./projection3Dto2D.png}
+      \caption{透視投影モデルにおける物体と投影面の関係\label{fig:model}}
+    \end{figure}
+    図\ref{fig:model}に示すように投影面上の各画素はその画素位置を結ぶ直線上の光を捉えている.
+    カメラではレンズが光学中心の役割を担っている.
+    \subsection{射影行列}
+    %\label{sub:射影行列}
+    透視投影によって投影面上に移された対象物体の平面座標ベクトル$\bm{m}$と実際の物体が存在する空間座標ベクトル$\bm{M}$の間には
+    \begin{equation}
+        s\bm{m} = \bm{P}\bm{M}
+    \end{equation}
+    が成り立ち,これを満たす行列$\bm{P}$が存在する.この行列係数$\bm{P}$を射影行列とよぶ.
+    $s$を算出するためベクトル$\bm{m},\bm{M}$をそれぞれ
+    \begin{equation}
+        \tilde{\bm{m}} = \left(
+        \begin{array}{c}
+            u \\
+            v \\
+            1
+        \end{array}
+        \right)
+    \end{equation}
+    \begin{equation}
+        \tilde{\bm{M}} = \left(
+        \begin{array}{c}
+            X \\
+            Y \\
+            Z \\
+            1
+        \end{array}
+        \right)
+    \end{equation}
+    と置換すると,
+    \begin{equation}
+        s\tilde{\bm{m}} =\bm{P}\tilde{\bm{M}}
+    \end{equation}
+    が成り立ち,
+    \begin{equation}
+        s\left(
+        \begin{array}{c}
+            u \\
+            v \\
+            1
+        \end{array}
+        \right) =
+        \left(
+    \begin{array}{cccc}
+      P_{11} & P_{12} & P_{13} & P_{14}\\
+      P_{21} & P_{22} & P_{23} & P_{24} \\
+      P_{31} & P_{32} & P_{33} & P_{34} \\
+    \end{array}
+        \right)
+        \left(
+        \begin{array}{c}
+            X \\
+            Y \\
+            Z \\
+            1
+        \end{array}
+        \right)
+        \label{eq:projection_matrix}
+    \end{equation}
+
+    \subsection{画像からのカメラキャリブレーション}
+    %\label{sub:画像からのカメラキャリブレーション}
+    対象となる物体をカメラで撮影し二次元画像を生成する際に物体をチェッカーの板で囲うことでチェッカーの交点を空間座標の格子点と見立てることで
+    画像上の平面座標のどこに物体の空間座標が対応しているかを知ることが出来る.
+    \subsection{射影行列の推定法}
+    %\label{sub:射影行列の推定法}
+    カメラキャリブレーションにより三次元座標$(X_n,Y_n,Z_n)$と投影される点$(u_n,v_n)$の組がN組あるとすると
+    \begin{equation}
+        ({\rm arg}\bm{B}) \left(
+        \begin{array}{c}
+            P_{11} \\
+            P_{12} \\
+            \vdots \\
+            P_{33}
+        \end{array}
+        \right)
+         = ({\rm arg}\bm{q})
+    \end{equation}
+    式(\ref{eq:projection_matrix})より$({\rm arg}\bm{B})$は2N列11行,$({\rm arg}\bm{q})$はN行の列ベクトルとなる.
+    \begin{equation}
+        ({\rm arg}\bm{B})= \left(
+    \begin{array}{ccccccccccc}
+      X_1 & Y_1 & Z_1 & 1 &0 & 0 & 0 & 0 &u_1X_1 & u_1Y_1 & u_1Z_1\\
+      0 & 0 & 0 & 0 &X_1 & Y_1 & Z_1 & 1 &v_1X_1 & v_1Y_1 & v_1Z_1\\
+      \vdots &&&&& \vdots &&&&& \vdots \\
+      X_N & Y_N & Z_N & 1 &0 & 0 & 0 & 0 &u_NX_N & u_NY_N & u_NZ_N\\
+      0 & 0 & 0 & 0 &X_N & Y_N & Z_N & 1 &v_NX_N & v_NY_N & v_NZ_N
+    \end{array}
+        \right)
+        \label{eq:argB}
+    \end{equation}
+
+    \begin{equation}
+        ({\rm arg}\bm{q}) = \left(
+        \begin{array}{c}
+            u_1 \\
+            v_1 \\
+            \vdots \\
+            u_N \\
+            v_N
+        \end{array}
+        \right)
+        \label{eq:argq}
+    \end{equation}
+    以上の式から三次元座標と対応する二次元座標がわかるとその連立方程式を解くことで射影行列を求めることが出来る.
+    \subsection{2台のカメラからの三次元位置推定}
+    %\label{sub:2台のカメラからの三次元位置推定}
+    2台のカメラを用いてそれぞれ異なる角度から物体を撮影する.その両カメラのそれぞれの射影行列を$\bm{P}$,$\bm{P}'$とすると
+    この2つの射影行列を用いることで三次元座標が両カメラに撮影される二次元座標$(u,v)$,$(u',v')$から求めることが出来る.
+    このとき
+    \begin{equation}
+        \bm{P}=\left(
+    \begin{array}{cccc}
+      P_{11} & P_{12} & P_{13} & P_{14}\\
+      P_{21} & P_{22} & P_{23} & P_{24} \\
+      P_{31} & P_{32} & P_{33} & P_{34} \\
+    \end{array}
+        \right)
+    \end{equation}
+    \begin{equation}
+        \bm{P}'=\left(
+    \begin{array}{cccc}
+      P'_{11} & P'_{12} & P'_{13} & P'_{14}\\
+      P'_{21} & P'_{22} & P'_{23} & P'_{24} \\
+      P'_{31} & P'_{32} & P'_{33} & P'_{34} \\
+    \end{array}
+        \right)
+    \end{equation}
+    とすれば
+    \begin{equation}
+        ({\rm arg}\bm{B}')\left(
+        \begin{array}{c}
+            X \\
+            Y \\
+            Z
+        \end{array}
+        \right)=({\rm arg}\bm{q}')
+    \end{equation}
+    を満たす行列$({\rm arg}\bm{B}')$と$({\rm arg}\bm{q}')$はそれぞれ
+    \begin{equation}
+        {\rm arg}\bm{B}'=\left(
+    \begin{array}{ccc}
+      P_{11}-uP_{31} & P_{12}-uP_{32} & P_{13}-uP_{33} \\
+      P_{21}-vP_{31} & P_{22}-vP_{32} & P_{23}-vP_{33} \\
+      P'_{11}-u'P'_{31} & P'_{12}-u'P'_{32} & 2_{13}-u'P'_{33} \\
+      P'_{21}-v'P'_{31} & P'_{22}-v'P'_{32} & 2_{23}-v'P'_{33} \\
+    \end{array}
+        \right)
+        \label{eq:argB'}
+    \end{equation}
+    \begin{equation}
+        {\rm arg}\bm{q}' = \left(
+        \begin{array}{c}
+            u-P_{14} \\
+            v-P_{24} \\
+            u'-P'_{14} \\
+            v'-P'_{24}
+        \end{array}
+        \right)
+        \label{eq:argq'}
+    \end{equation}
+    と表される.
+    \section{実験方法}
+    %\label{sec:way}
+    対象となるポケモンのフィギュアをカメラで画像を二枚撮影しその画像をPCにデータとして取り込み立体形状復元を行うプログラムの実装を行った.
+    プログラムの実装にはWindows7搭載のPCでVisual StudioとOpenCVを利用した.
+    \subsection{射影行列の意味の理解}
+    2章で述べた理論を基に射影行列がどのようなものなのかを立方体を表示するというデモを行って理解した.
+    この実験では既にわかっている射影行列と立方体の8頂点の三次元座標から画像上の投影される二次元座標の値を算出するプログラムを自分で実装した.
+    \subsection{取り込んだ各画像の射影行列の推定}
+    ポケモンのフィギュアを撮影部分が出来るだけ共通して見える範囲が広くなるように異なる視点から撮影した画像2枚をPCに取り込んだ.
+    次に射影行列を求める連立方程式を定めるために
+    式(\ref{eq:argB})と式(\ref{eq:argq})で定められる${\rm arg}\bm{B}$と${\rm arg}\bm{q}$の各要素を
+    算出するプログラムを自分で実装した.これによりカメラキャリブレーションができる.
+    プログラムを実行すると射影行列が求められ,先ほど取り込んだ画像上でチェッカーの交点を手がかりに三次元座標と
+    それに対応する画像上に投影される二次元座標をプロットすることで画像上における三次元座標を定めた.
+    \subsection{画像の立体形状復元とCG描画}
+    次に画像上の対象物体をクリックするとその三次元座標がわかるように式(\ref{eq:argB'})と式(\ref{eq:argq'})で定められる
+    ${\rm arg}\bm{B}'$と${\rm arg}\bm{q}'$の各要素を算出するプログラムを自分で実装した.
+    その後,撮影した対象物体の特徴的かつ2枚の画像で共通して確認できる点20\verb|~|30個ほどをプロットしてくことで元の立体形状を復元しCG描画した.
+    \section{結果}
+    %\label{sec:result}
+    立方体を描画した画像を図\ref{fig:cube}に示す.
+    \begin{figure}[H]
+      \centering
+      \includegraphics[clip,width=7.0cm ,height= 6.0cm]{./cube_Result.jpg}
+      \caption{立方体の描画\label{fig:cube}}
+    \end{figure}
+    取り込んだ画像を図\ref{fig:input1},図\ref{fig:input2}に示す
+    \begin{figure}[H]
+      \centering
+      \includegraphics[clip,width=7.0cm ,height= 6.0cm]{./input0.jpg}
+      \caption{入力画像1\label{fig:input1}}
+    \end{figure}
+    \begin{figure}[H]
+      \centering
+      \includegraphics[clip,width=7.0cm ,height= 6.0cm]{./input1.jpg}
+      \caption{入力画像2\label{fig:input2}}
+    \end{figure}
+    入力画像についてカメラキャリブレーションを行いチェッカーの交点の三次元座標をプロットした画像を
+    図\ref{fig:cc_input1},図\ref{fig:cc_input2}に示す.
+    \begin{figure}[H]
+      \centering
+      \includegraphics[clip,width=7.0cm ,height= 6.0cm]{./ccResult0.jpg}
+      \caption{入力画像1についてのカメラキャリブレーション結果\label{fig:cc_input1}}
+    \end{figure}
+    \begin{figure}[H]
+      \centering
+      \includegraphics[clip,width=7.0cm ,height= 6.0cm]{./ccResult1.jpg}
+      \caption{入力画像2についてのカメラキャリブレーションの結果\label{fig:cc_input2}}
+    \end{figure}
+    図\ref{fig:plotProcess}に形状復元のために画像上の物体の特徴点のプロットした様子を示す.
+    \begin{figure}[H]
+      \centering
+      \includegraphics[clip,width=13.0cm ,height= 6.0cm]{./plotProcess.jpg}
+      \caption{形状復元のための画像プロット\label{fig:plotProcess}}
+    \end{figure}
+    最後に図\ref{fig:result_front}〜図\ref{fig:result_bottom}に立体形状復元後にCG描画したポケモンのフィギュアの
+    正面,左,上下から見た様子を示す.
+    \begin{figure}[H]
+      \centering
+      \includegraphics[clip,width=13.0cm ,height= 6.0cm]{./result_front.png}
+      \caption{立体形状後のモデル(正面)\label{fig:result_front}}
+    \end{figure}
+    \begin{figure}[H]
+      \centering
+      \includegraphics[clip,width=13.0cm ,height= 6.0cm]{./result_left.png}
+      \caption{立体形状後のモデル(左側)\label{fig:result_left}}
+    \end{figure}
+    \begin{figure}[H]
+      \centering
+      \includegraphics[clip,width=13.0cm ,height= 6.0cm]{./result_above.png}
+      \caption{立体形状後のモデル(上側)\label{fig:result_above}}
+    \end{figure}
+    \begin{figure}[H]
+      \centering
+      \includegraphics[clip,width=13.0cm ,height= 6.0cm]{./result_top.png}
+      \caption{立体形状後のモデル(真上)\label{fig:result_top}}
+    \end{figure}
+    \begin{figure}[H]
+      \centering
+      \includegraphics[clip,width=13.0cm ,height= 6.0cm]{./result_above_right.png}
+      \caption{立体形状後のモデル(斜め右上)\label{fig:result_above_right}}
+    \end{figure}
+    \begin{figure}[H]
+      \centering
+      \includegraphics[clip,width=13.0cm ,height= 6.0cm]{./result_bottom.png}
+      \caption{立体形状後のモデル(下側)\label{fig:result_bottom}}
+    \end{figure}
+    \section{考察}
+    %\label{sec:think}
+    \subsection{実験結果の画像について}
+    %\label{sub:実験結果の画像と復元したCGモデルについて}
+    実験結果の画像からある程度の精度で復元できたことがわかる.入力画像がフィギュアの正面に近いところから撮影したことにより
+    顔以外のパーツの立体形状の復元には至らなかったがその分,顔の凹凸や顔上部の立体感の再現ができている.カメラキャリブレーションによる
+    チェッカーの交点もほとんどきれいに格子点上にプロットされていることからも精度がある程度よかったことはうかがえる.
+    先述である程度としているのは,復元が点と点を結んだ三角測量の要領で行われているため,
+    どうしてもポケモンに特有の曲線や丸みを帯びたフォルムの復元は難しいからである.例えば左側から見たときの鼻の部分の尖り方は実物とは
+    大きく違ってしまっている.特に今回の対象となる
+    フィギュアは特徴的な点が物体の殆どが単色の暗い色であったことからプロットする点が限られてしまったことも精度向上に繋がらなかった点である.
+
+    \subsection{誤差要因について}
+    %\label{sub:誤差要因について}
+    誤差の要因についてはベースの理論として考えた透視投影モデルの精密さに問題があると考えられる.今回はレンズのあるカメラを用いたので
+    当然,レンズの厚みやその形状,大きさによる歪みやレンズの箇所による屈折率の違いなどが生じてしまう.一方,透視投影モデルはレンズカメラというよりは
+    ピンホールカメラで撮影したようなモデルで考えているので,レンズの有無による誤差は生じる.またカメラの撮影した時の位置やカメラキャリブレーションで
+    座標を自分の手でプロットしたときの若干のずれも誤差の要因になりうる.またサンプル値としてプロットした三次元座標の分布も復元精度に関係している。
+    チェッカーの交点,つまり三次元座標のX平面,Y平面,Z平面のいずれかに含まれる座標しかプロットしていないがずれがなく空間上の点もサンプルとしてプロットできれば
+    より精度が上がると考えられる.
+    \subsection{カメラの位置関係と立体形状の復元精度}
+    %\label{sub:カメラの位置関係と立体形状の復元精度}
+    今回行った2台のカメラを用いた方法ではカメラ同士の視点の距離が対象までの距離に対して長くなってしまうと
+    同じ物体表面上の点の見え方が大きく異なるため三次元座標と二次元座標の対応の精度が悪くなると考えられる.
+    これは自然界における肉食動物と草食動物の顔における目の位置の違いにも関連付けて説明することが出来る.
+    肉食動物は顔の前の方に目がついている.つまり2台のカメラの視点の距離が近い状態である.この利点は獲物との距離感が掴みやすいことにある.
+    一方で草食動物は距離感はさほど大切ではなくそれよりもどこにいる敵でも早く見つけるため,視野が広くなるように顔の側面に目がついている.
+    しかし距離感はとても掴みづらい.このことからも2台のカメラが近い状態のほうが対象物体までの距離を正確に測ることが出来てより立体形状の復元には有利である.
+    \subsection{立体形状全体の復元}
+    立体形状の復元精度を上げるためにはカメラ同士の視点の距離は大きくなり過ぎないほうがいい.しかし視点の距離を縮めてしまうと画像に投影できる範囲が
+    狭くなってしまい対象の全体を映すことが出来ない.
+    もしカメラを多数使うことが出来るのならば,対象物体を何台ものカメラで囲むことで視点間の距離,対象の撮影範囲の両方を解決できる.
+    %\label{sub:立体形状全体の復元}
+
+    \section{結論}
+    %\label{sec:conclusion}
+    本実験と考察を行うことでカメラで撮影した画像から三次元形状を復元する方法と理論を理解するとともに
+    実際に復元することでどの程度の精度で復元できるかを確認することが出来た.
+
+\end{document}
